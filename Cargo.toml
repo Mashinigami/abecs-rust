@@ -9,6 +9,10 @@ license = "MIT"
 [lib]
 name = "pinpad"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-serialport = "4.3"
+serialport = "4.8.1"
+qrcode = "0.14.1"
+image = { version = "0.25.10", default-features = false, features = ["png"]  }
+jni = "0.21.1"

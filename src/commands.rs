@@ -427,6 +427,52 @@ pub struct GetDataResponse {
     pub data: String,
 }
 
+/// Tipo de arquivo multimídia
+#[derive(Debug, Clone, PartialEq)]
+pub enum MultimediaFileType {
+    Png,
+    Jpg,
+    Gif,
+    Unknown(u8),
+}
+
+impl MultimediaFileType {
+    pub fn to_byte(&self) -> u8 {
+        match self {
+            MultimediaFileType::Png => 0x01,
+            MultimediaFileType::Jpg => 0x02,
+            MultimediaFileType::Gif => 0x03,
+            MultimediaFileType::Unknown(v) => *v,
+        }
+    }
+
+    pub fn from_byte(b: u8) -> Self {
+        match b {
+            0x01 => MultimediaFileType::Png,
+            0x02 => MultimediaFileType::Jpg,
+            0x03 => MultimediaFileType::Gif,
+            v => MultimediaFileType::Unknown(v),
+        }
+    }
+}
+
+impl std::fmt::Display for MultimediaFileType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MultimediaFileType::Png => write!(f, "PNG"),
+            MultimediaFileType::Jpg => write!(f, "JPG"),
+            MultimediaFileType::Gif => write!(f, "GIF"),
+            MultimediaFileType::Unknown(v) => write!(f, "Unknown(0x{:02X})", v),
+        }
+    }
+}
+
+/// Resposta do comando ListMultimediaFiles (LMF)
+#[derive(Debug, Clone)]
+pub struct ListMultimediaFilesResponse {
+    pub files: Vec<String>,
+}
+
 /// Resposta do comando GetCard (GCX)
 #[derive(Debug, Clone)]
 pub struct GetCardResponse {
@@ -746,6 +792,82 @@ pub mod AbecsCommand {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // Display - Mostrar Mensagem Livre (DEX)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[derive(Debug, Clone)]
+    pub struct DisplayMessage {
+        pub message: String,
+    }
+
+    impl DisplayMessage {
+        pub fn new(message: impl Into<String>) -> Self {
+            let input = message.into();
+
+            let lines: Vec<&str> = input.lines().collect();
+            let mut processed_lines = Vec::new();
+            let mut total_chars_without_newlines = 0;
+
+            for line in lines {
+                if total_chars_without_newlines + line.len() > 128 {
+                    let remaining = 128 - total_chars_without_newlines;
+                    if remaining > 0 {
+                        let truncated_line = &line[..remaining.min(line.len())];
+                        processed_lines.push(format_line_with_breaks(truncated_line));
+                        total_chars_without_newlines += truncated_line.len();
+                    }
+                    break;
+                }
+
+                // Processa a linha adicionando quebras a cada 16 caracteres
+                let formatted_line = format_line_with_breaks(line);
+                total_chars_without_newlines += line.len();
+                processed_lines.push(formatted_line);
+            }
+
+            // Junta as linhas com \n
+            let formatted = processed_lines.join("\n");
+
+            // Calcula o tamanho TOTAL incluindo \n
+            // Contamos: caracteres originais + quebras de linha que foram adicionadas
+            let num_newlines = formatted.matches('\n').count();
+            let total_size = total_chars_without_newlines + num_newlines;
+
+            // Prepend dos 3 primeiros caracteres com o tamanho (zero-padded)
+            let size_str = format!("{:03}", total_size);
+            let final_message = format!("{}{}", size_str, formatted);
+
+            Self {
+                message: final_message,
+            }
+        }
+    }
+
+    impl AbecsTypedCommand for DisplayMessage {
+        type Response = EmptyResponse;
+
+        fn command_id(&self) -> &str {
+            "DEX"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            vec![self.message.serialize_abecs()]
+        }
+    }
+
+    /// Função auxiliar para adicionar quebras de linha a cada 16 caracteres
+    fn format_line_with_breaks(line: &str) -> String {
+        let mut result = String::new();
+        for (i, ch) in line.chars().enumerate() {
+            if i > 0 && i % 16 == 0 {
+                result.push('\n');
+            }
+            result.push(ch);
+        }
+        result
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // ClearDisplay - Limpar Display (CLX)
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -796,6 +918,30 @@ pub mod AbecsCommand {
 
         fn serialize_params(&self) -> Vec<Vec<u8>> {
             vec![self.info_type.serialize_abecs()]
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // GetInfoExtended - Obter Informações Extendido (GIX)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[derive(Debug, Clone)]
+    pub struct GetInfoExtended;
+
+    impl GetInfoExtended {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    impl AbecsTypedCommand for GetInfoExtended {
+        type Response = EmptyResponse;
+        fn command_id(&self) -> &str {
+            "GIX"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            vec![]
         }
     }
 
@@ -1555,6 +1701,234 @@ pub mod AbecsCommand {
             blocks
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MultimediaLoadInit - Iniciar Carga de Arquivo Multimídia (MLI)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[derive(Debug, Clone)]
+    pub struct MultimediaLoadInit {
+        pub file_name: String,
+        pub file_size: u32,
+        pub file_crc: u16,
+        pub file_type: MultimediaFileType,
+    }
+
+    impl MultimediaLoadInit {
+        pub fn new(
+            file_name: impl Into<String>,
+            file_size: u32,
+            file_crc: u16,
+            file_type: MultimediaFileType,
+        ) -> Self {
+            Self {
+                file_name: file_name.into(),
+                file_size,
+                file_crc,
+                file_type,
+            }
+        }
+    }
+
+    impl AbecsTypedCommand for MultimediaLoadInit {
+        type Response = EmptyResponse;
+
+        fn command_id(&self) -> &str {
+            "MLI"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            use crate::serialize::abecs_param;
+
+            let mut all_params = Vec::new();
+
+            // SPE_MFNAME (0x001E) - Nome do arquivo
+            all_params.extend_from_slice(&abecs_param(0x001E, self.file_name.as_bytes()));
+
+            // SPE_MFINFO (0x001F) - Informações do arquivo:
+            // X4 (tamanho) + B2 (CRC) + B1 (tipo) + B3 (RUF)
+            let mut mfinfo = Vec::new();
+            mfinfo.extend_from_slice(&self.file_size.to_be_bytes());
+            mfinfo.extend_from_slice(&self.file_crc.to_be_bytes());
+            mfinfo.push(self.file_type.to_byte());
+            mfinfo.extend_from_slice(&[0x00, 0x00, 0x00]); // RUF
+            all_params.extend_from_slice(&abecs_param(0x001F, &mfinfo));
+
+            vec![all_params]
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MultimediaLoadRecord - Enviar Dados de Arquivo Multimídia (MLR)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[derive(Debug, Clone)]
+    pub struct MultimediaLoadRecord {
+        pub data_blocks: Vec<Vec<u8>>,
+    }
+
+    impl MultimediaLoadRecord {
+        pub fn new(data_blocks: Vec<Vec<u8>>) -> Self {
+            Self { data_blocks }
+        }
+
+        pub fn from_single(data: Vec<u8>) -> Self {
+            Self {
+                data_blocks: vec![data],
+            }
+        }
+    }
+
+    impl AbecsTypedCommand for MultimediaLoadRecord {
+        type Response = EmptyResponse;
+
+        fn command_id(&self) -> &str {
+            "MLR"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            use crate::serialize::abecs_param;
+
+            let mut params_list: Vec<Vec<u8>> = Vec::new();
+
+            // SPE_DATAIN (0x000F) - Cada bloco vira um parâmetro independente na lista
+            for block in &self.data_blocks {
+                // Usamos .push() para colocar o Vec<u8> gerado dentro do Vec<Vec<u8>>
+                let parametro_formatado = abecs_param(0x000F, block);
+                params_list.push(parametro_formatado);
+            }
+
+            params_list
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MultimediaLoadEnd - Finalizar Carga de Arquivo Multimídia (MLE)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[derive(Debug, Clone)]
+    pub struct MultimediaLoadEnd;
+
+    impl MultimediaLoadEnd {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    impl AbecsTypedCommand for MultimediaLoadEnd {
+        type Response = EmptyResponse;
+
+        fn command_id(&self) -> &str {
+            "MLE"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            Vec::new()
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ListMultimediaFiles - Listar Arquivos Multimídia (LMF)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[derive(Debug, Clone)]
+    pub struct ListMultimediaFiles;
+
+    impl ListMultimediaFiles {
+        pub fn new() -> Self {
+            Self
+        }
+    }
+
+    impl AbecsTypedCommand for ListMultimediaFiles {
+        type Response = ListMultimediaFilesResponse;
+
+        fn command_id(&self) -> &str {
+            "LMF"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            Vec::new()
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DeleteMultimediaFiles - Excluir Arquivos Multimídia (DMF)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[derive(Debug, Clone)]
+    pub struct DeleteMultimediaFiles {
+        pub file_names: Vec<String>,
+    }
+
+    impl DeleteMultimediaFiles {
+        pub fn new(file_names: Vec<String>) -> Self {
+            Self { file_names }
+        }
+
+        pub fn single(file_name: impl Into<String>) -> Self {
+            Self {
+                file_names: vec![file_name.into()],
+            }
+        }
+    }
+
+    impl AbecsTypedCommand for DeleteMultimediaFiles {
+        type Response = EmptyResponse;
+
+        fn command_id(&self) -> &str {
+            "DMF"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            use crate::serialize::abecs_param;
+
+            let mut all_params = Vec::new();
+
+            // SPE_MFNAME (0x001E) - Nomes dos arquivos a excluir
+            for name in &self.file_names {
+                all_params.extend_from_slice(&abecs_param(0x001E, name.as_bytes()));
+            }
+
+            vec![all_params]
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DisplayImage - Apresentar Imagem no Display (DSI)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[derive(Debug, Clone)]
+    pub struct DisplayImage {
+        pub file_name: String,
+    }
+
+    impl DisplayImage {
+        pub fn new(file_name: impl Into<String>) -> Self {
+            Self {
+                file_name: file_name.into(),
+            }
+        }
+    }
+
+    impl AbecsTypedCommand for DisplayImage {
+        type Response = EmptyResponse;
+
+        fn command_id(&self) -> &str {
+            "DSI"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            use crate::serialize::abecs_param;
+
+            let mut all_params = Vec::new();
+
+            // SPE_MFNAME (0x001E) - Nome do arquivo a apresentar
+            all_params.extend_from_slice(&abecs_param(0x001E, self.file_name.as_bytes()));
+
+            vec![all_params]
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1843,6 +2217,39 @@ impl AbecsDeserialize for FinishChipResponse {
             emv_data,
             issuer_results,
         })
+    }
+}
+
+impl AbecsDeserialize for ListMultimediaFilesResponse {
+    fn deserialize_abecs(response: &AbecsResponse) -> Result<Self, String> {
+        let mut files = Vec::new();
+
+        // A resposta pode não ter blocos se não houver arquivos
+        if let Some(block) = response.get_block(0) {
+            // Parser TLV: múltiplos PP_MFNAME (0x805E)
+            let mut pos = 0;
+            while pos + 4 <= block.len() {
+                let param_id = ((block[pos] as u16) << 8) | (block[pos + 1] as u16);
+                let param_len = ((block[pos + 2] as u16) << 8) | (block[pos + 3] as u16);
+                pos += 4;
+
+                if pos + param_len as usize > block.len() {
+                    break;
+                }
+
+                let value = &block[pos..pos + param_len as usize];
+
+                if param_id == 0x805E {
+                    // PP_MFNAME - Nome do arquivo
+                    let name = String::from_utf8_lossy(value).trim().to_string();
+                    files.push(name);
+                }
+
+                pos += param_len as usize;
+            }
+        }
+
+        Ok(ListMultimediaFilesResponse { files })
     }
 }
 

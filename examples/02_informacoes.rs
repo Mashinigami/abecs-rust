@@ -68,6 +68,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Informações do Pinpad Extended");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    let cmd = AbecsCommand::GetInfoExtended::new();
+    pinpad.execute_typed(&cmd)?;
+
     // Fechar sessão
     println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     let cmd = AbecsCommand::Close::new();

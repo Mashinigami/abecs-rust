@@ -71,7 +71,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::thread::sleep(std::time::Duration::from_secs(2));
 
     // ═══════════════════════════════════════════════════════════
-    // 5. Limpar display (CLX)
+    // 5. Exibir mensagem livre (DEX)
+    // ═══════════════════════════════════════════════════════════
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Exibindo mensagem livre no Pinpad...");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    let cmd = AbecsCommand::DisplayMessage::new("12345678901234!\n  34567890123456123456789012345612345678901234561234567890123456123456789012345612345678901234561234567890123456");
+
+    pinpad.execute_typed(&cmd)?;
+
+    println!("✅ Mensagem livre exibida!\n");
+
+    // Aguarda um pouco
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
+    // ═══════════════════════════════════════════════════════════
+    // 6. Limpar display (CLX)
     // ═══════════════════════════════════════════════════════════
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Limpando display...");

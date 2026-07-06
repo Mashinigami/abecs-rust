@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::time::Duration;
 
 use crate::command::AbecsCommand;
+use crate::AbecsCommand as TypedAbecsCommand;
 use crate::error::AbecsError;
 use crate::protocol::*;
 use crate::response::AbecsResponse;
@@ -49,6 +50,17 @@ impl PinpadConnection {
             port,
             verbose: false,
         })
+    }
+
+    /// Busca as portas seriais disponíveis
+    pub fn get_ports() -> Result<Vec<String>> {
+        let ports = serialport::available_ports()
+            .map_err(|e| AbecsError::SerialError(format!("Erro ao buscar portas: {}", e)))?;
+
+        Ok(ports
+            .iter()
+            .map(|p| { format!("{}", p.port_name) })
+            .collect())
     }
 
     /// Lista as portas seriais disponíveis
@@ -425,6 +437,40 @@ impl PinpadConnection {
             }
 
             println!();
+        }
+    }
+
+    /// Procura automaticamente por um Pinpad conectado nas portas seriais disponíveis.
+    pub fn autodetect() -> Option<String> {
+        let ports = match Self::get_ports() {
+            Ok(ports) => ports,
+            Err(_) => return None,
+        };
+
+        for port_name in ports {
+            if Self::is_pinpad_port(&port_name) {
+                return Some(port_name);
+            }
+        }
+
+        None
+    }
+
+    /// Testa se a porta serial informada responde como um Pinpad ABECS.
+    fn is_pinpad_port(port_name: &str) -> bool {
+        match Self::open(port_name) {
+            Ok(mut pinpad) => {
+                let cmd_open = TypedAbecsCommand::Open::new();
+
+                if pinpad.execute_typed(&cmd_open).is_ok() {
+                    let cmd_close = TypedAbecsCommand::Close::new();
+                    let _ = pinpad.execute_typed(&cmd_close);
+                    true
+                } else {
+                    false
+                }
+            }
+            Err(_) => false,
         }
     }
 }

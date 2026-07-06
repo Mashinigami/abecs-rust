@@ -8,6 +8,8 @@ pub mod error;
 pub mod protocol;
 pub mod response;
 pub mod serialize;
+pub mod qrcode;
+pub mod libpinpadso;
 
 // Re-exporta os tipos principais para facilitar o uso
 pub use command::AbecsCommand as RawAbecsCommand;
@@ -21,8 +23,8 @@ pub use serialize::{AbecsDeserialize, AbecsSerialize, AbecsTypedCommand};
 // Re-exporta as respostas e estruturas
 pub use commands::{
     CardType, EmptyResponse, FinishChipResponse, GetCardResponse, GetDataResponse, GetInfoResponse,
-    GetKeyResponse, GetPinResponse, GetTracksResponse, GoOnChipResponse, MenuResponse,
-    PaymentMethod, Track1Data,
+    GetKeyResponse, GetPinResponse, GetTracksResponse, GoOnChipResponse, ListMultimediaFilesResponse,
+    MenuResponse, MultimediaFileType, PaymentMethod, Track1Data,
 };
 
 /// Tipo Result padrão da biblioteca
