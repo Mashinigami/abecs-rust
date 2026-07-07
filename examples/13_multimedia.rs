@@ -22,8 +22,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ═══════════════════════════════════════════════════════════
     // 1. Dados da imagem
     // ═══════════════════════════════════════════════════════════
-    let file_data_raw = generate_custom_qrcode("https://google.com")?;
+    // let file_path = "examples/images/QRCode_example.png";
+    // let file_data = fs::read(file_path)?;
 
+    let file_data_raw = generate_custom_qrcode("https://google.com")?;
     let mut file_data = Vec::new();
     file_data_raw.write_to(&mut Cursor::new(&mut file_data), ImageFormat::Png)
         .expect("Failed to encode PNG");
@@ -154,7 +156,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Arquivo '{}' excluído!\n", file_name);
 
     // ═══════════════════════════════════════════════════════════
-    // 10. Fechar sessão (CLO)
+    // 10. Limpar display (CLX)
+    // ═══════════════════════════════════════════════════════════
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Limpando display...");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    let cmd = AbecsCommand::ClearDisplay::new();
+    pinpad.execute_typed(&cmd)?;
+
+    println!("✅ Display limpo!\n");
+
+    // ═══════════════════════════════════════════════════════════
+    // 11. Fechar sessão (CLO)
     // ═══════════════════════════════════════════════════════════
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Fechando sessão...");

@@ -10,6 +10,7 @@ pub mod response;
 pub mod serialize;
 pub mod qrcode;
 pub mod libpinpadso;
+pub mod image;
 
 // Re-exporta os tipos principais para facilitar o uso
 pub use command::AbecsCommand as RawAbecsCommand;
