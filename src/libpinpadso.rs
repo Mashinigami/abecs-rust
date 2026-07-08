@@ -5,6 +5,7 @@ use jni::JNIEnv;
 use std::ffi::c_void;
 use std::io::Cursor;
 use image::ImageFormat;
+use crate::commands::CheckEventExtendedEvent;
 use crate::image::resize_image_bytes_to_fit_png;
 use crate::protocol::calculate_crc16;
 use crate::qrcode::generate_custom_qrcode;
@@ -133,6 +134,32 @@ extern "system" fn write_png(
     }
 }
 
+extern "system" fn write_png_with_keypress(
+    env: JNIEnv,
+    _class: JClass,
+    png_bytes: JByteArray,
+) -> jint {
+    if let Some(port_storage) = PinpadConnection::autodetect() {
+        let port_str: &str = port_storage.as_str();
+
+        let file_data = match env.convert_byte_array(png_bytes) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                eprintln!("Erro ao ler array de bytes da imagem: {:?}", error);
+                return -1;
+            }
+        };
+
+        write_png_with_keypress_impl(port_str, &file_data).unwrap_or_else(|error| {
+            eprintln!("Erro ao mostrar imagem: {:?}", error);
+            -1
+        })
+    } else {
+        eprintln!("Erro: Nenhum Pinpad foi encontrado automaticamente.");
+        -1
+    }
+}
+
 fn write_message_impl(port_name: &str, message: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut pinpad = PinpadConnection::open(port_name)?;
     let cmd = AbecsCommand::Open::new();
@@ -243,6 +270,56 @@ fn write_png_impl(port_name: &str, file_data_raw: &[u8]) -> Result<(), Box<dyn s
     Ok(())
 }
 
+fn write_png_with_keypress_impl(port_name: &str, file_data_raw: &[u8]) -> Result<i32, Box<dyn std::error::Error>> {
+    let mut pinpad = PinpadConnection::open(port_name)?;
+    let cmd = AbecsCommand::Open::new();
+    pinpad.execute_typed(&cmd)?;
+
+    let file_data = resize_image_bytes_to_fit_png(file_data_raw, 320, 230, true)?;
+    let file_size = file_data.len() as u32;
+    let file_crc = calculate_crc16(&file_data);
+    let file_name = "IMAGE001";
+
+    let cmd = AbecsCommand::MultimediaLoadInit::new(
+        file_name,
+        file_size,
+        file_crc,
+        MultimediaFileType::Png,
+    );
+    pinpad.execute_typed(&cmd)?;
+
+    let block_size = 989;
+    for chunk in file_data.chunks(block_size) {
+        let cmd = AbecsCommand::MultimediaLoadRecord::from_single(chunk.to_vec());
+        pinpad.execute_typed(&cmd)?;
+    }
+
+    let cmd = AbecsCommand::MultimediaLoadEnd::new();
+    pinpad.execute_typed(&cmd)?;
+
+    let cmd = AbecsCommand::DisplayImage::new(file_name);
+    pinpad.execute_typed(&cmd)?;
+
+    let cmd = AbecsCommand::DeleteMultimediaFiles::single(file_name);
+    pinpad.execute_typed(&cmd)?;
+
+    let cmd = AbecsCommand::CheckEventExtended::key().with_timeout(60);
+    let key_response = pinpad.execute_typed(&cmd)?;
+    let response = match key_response.event {
+        CheckEventExtendedEvent::OkEnter => 1,
+        CheckEventExtendedEvent::Cancel => 0,
+        _ => -1,
+    };
+
+    let cmd = AbecsCommand::ClearDisplay::new();
+    pinpad.execute_typed(&cmd)?;
+
+    let cmd = AbecsCommand::Close::new();
+    pinpad.execute_typed(&cmd)?;
+
+    Ok(response)
+}
+
 #[no_mangle]
 pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut c_void) -> jint {
     if let Ok(mut env) = vm.get_env() {
@@ -274,6 +351,11 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut c_void) -> ji
                     name: jni::strings::JNIString::from("writePng"),
                     sig: jni::strings::JNIString::from("([B)Z"),
                     fn_ptr: write_png as *mut c_void,
+                },
+                jni::NativeMethod {
+                    name: jni::strings::JNIString::from("writePngWithKeypress"),
+                    sig: jni::strings::JNIString::from("([B)I"),
+                    fn_ptr: write_png_with_keypress as *mut c_void,
                 }
             ];
 
