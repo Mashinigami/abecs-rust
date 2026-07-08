@@ -494,6 +494,168 @@ pub struct GetCardResponse {
     pub aid_table_info: Option<Vec<u8>>,
 }
 
+/// Evento retornado pelo comando CEX no campo PP_EVENT.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CheckEventExtendedEvent {
+    /// "00" = tecla [OK/ENTER]
+    OkEnter,
+    /// "02" = tecla seta para cima
+    ArrowUp,
+    /// "03" = tecla seta para baixo
+    ArrowDown,
+    /// "04" = tecla [F1]
+    F1,
+    /// "05" = tecla [F2]
+    F2,
+    /// "06" = tecla [F3]
+    F3,
+    /// "07" = tecla [F4]
+    F4,
+    /// "08" = tecla [CLEAR]
+    Clear,
+    /// "13" = tecla [CANCEL]
+    Cancel,
+    /// "90" = cartão magnético passado
+    MagneticCardSwiped,
+    /// "91" = ICC removido ou já ausente
+    IccRemovedOrAbsent,
+    /// "92" = ICC inserido ou já presente
+    IccInsertedOrPresent,
+    /// "93" = CTLS não detectado em 2 minutos
+    CtlsNotDetected,
+    /// "94" = CTLS detectado
+    CtlsDetected,
+    /// Código desconhecido/não mapeado
+    Unknown(String),
+}
+
+impl CheckEventExtendedEvent {
+    pub fn from_code(code: &str) -> Self {
+        match code {
+            "00" => CheckEventExtendedEvent::OkEnter,
+            "02" => CheckEventExtendedEvent::ArrowUp,
+            "03" => CheckEventExtendedEvent::ArrowDown,
+            "04" => CheckEventExtendedEvent::F1,
+            "05" => CheckEventExtendedEvent::F2,
+            "06" => CheckEventExtendedEvent::F3,
+            "07" => CheckEventExtendedEvent::F4,
+            "08" => CheckEventExtendedEvent::Clear,
+            "13" => CheckEventExtendedEvent::Cancel,
+            "90" => CheckEventExtendedEvent::MagneticCardSwiped,
+            "91" => CheckEventExtendedEvent::IccRemovedOrAbsent,
+            "92" => CheckEventExtendedEvent::IccInsertedOrPresent,
+            "93" => CheckEventExtendedEvent::CtlsNotDetected,
+            "94" => CheckEventExtendedEvent::CtlsDetected,
+            _ => CheckEventExtendedEvent::Unknown(code.to_string()),
+        }
+    }
+
+    pub fn to_code(&self) -> String {
+        match self {
+            CheckEventExtendedEvent::OkEnter => "00".to_string(),
+            CheckEventExtendedEvent::ArrowUp => "02".to_string(),
+            CheckEventExtendedEvent::ArrowDown => "03".to_string(),
+            CheckEventExtendedEvent::F1 => "04".to_string(),
+            CheckEventExtendedEvent::F2 => "05".to_string(),
+            CheckEventExtendedEvent::F3 => "06".to_string(),
+            CheckEventExtendedEvent::F4 => "07".to_string(),
+            CheckEventExtendedEvent::Clear => "08".to_string(),
+            CheckEventExtendedEvent::Cancel => "13".to_string(),
+            CheckEventExtendedEvent::MagneticCardSwiped => "90".to_string(),
+            CheckEventExtendedEvent::IccRemovedOrAbsent => "91".to_string(),
+            CheckEventExtendedEvent::IccInsertedOrPresent => "92".to_string(),
+            CheckEventExtendedEvent::CtlsNotDetected => "93".to_string(),
+            CheckEventExtendedEvent::CtlsDetected => "94".to_string(),
+            CheckEventExtendedEvent::Unknown(code) => code.clone(),
+        }
+    }
+
+    pub fn description(&self) -> &str {
+        match self {
+            CheckEventExtendedEvent::OkEnter => "Tecla OK/ENTER pressionada",
+            CheckEventExtendedEvent::ArrowUp => "Tecla seta para cima pressionada",
+            CheckEventExtendedEvent::ArrowDown => "Tecla seta para baixo pressionada",
+            CheckEventExtendedEvent::F1 => "Tecla F1 pressionada",
+            CheckEventExtendedEvent::F2 => "Tecla F2 pressionada",
+            CheckEventExtendedEvent::F3 => "Tecla F3 pressionada",
+            CheckEventExtendedEvent::F4 => "Tecla F4 pressionada",
+            CheckEventExtendedEvent::Clear => "Tecla CLEAR pressionada",
+            CheckEventExtendedEvent::Cancel => "Tecla CANCEL pressionada",
+            CheckEventExtendedEvent::MagneticCardSwiped => "Cartão magnético passado",
+            CheckEventExtendedEvent::IccRemovedOrAbsent => "ICC removido ou já ausente",
+            CheckEventExtendedEvent::IccInsertedOrPresent => "ICC inserido ou já presente",
+            CheckEventExtendedEvent::CtlsNotDetected => "CTLS não detectado em 2 minutos",
+            CheckEventExtendedEvent::CtlsDetected => "CTLS detectado",
+            CheckEventExtendedEvent::Unknown(_) => "Evento desconhecido",
+        }
+    }
+
+    pub fn is_key(&self) -> bool {
+        matches!(
+            self,
+            CheckEventExtendedEvent::OkEnter
+                | CheckEventExtendedEvent::ArrowUp
+                | CheckEventExtendedEvent::ArrowDown
+                | CheckEventExtendedEvent::F1
+                | CheckEventExtendedEvent::F2
+                | CheckEventExtendedEvent::F3
+                | CheckEventExtendedEvent::F4
+                | CheckEventExtendedEvent::Clear
+                | CheckEventExtendedEvent::Cancel
+        )
+    }
+
+    pub fn is_magnetic_card(&self) -> bool {
+        matches!(self, CheckEventExtendedEvent::MagneticCardSwiped)
+    }
+
+    pub fn is_icc(&self) -> bool {
+        matches!(
+            self,
+            CheckEventExtendedEvent::IccRemovedOrAbsent
+                | CheckEventExtendedEvent::IccInsertedOrPresent
+        )
+    }
+
+    pub fn is_ctls(&self) -> bool {
+        matches!(
+            self,
+            CheckEventExtendedEvent::CtlsNotDetected | CheckEventExtendedEvent::CtlsDetected
+        )
+    }
+}
+
+impl std::fmt::Display for CheckEventExtendedEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.description())
+    }
+}
+
+/// Resposta do comando CheckEventExtended (CEX).
+#[derive(Debug, Clone)]
+pub struct CheckEventExtendedResponse {
+    /// Evento identificado no PP_EVENT.
+    pub event: CheckEventExtendedEvent,
+
+    /// Código original do PP_EVENT.
+    pub event_code: String,
+
+    /// Trilha 1 incompleta, se lida de cartão magnético.
+    ///
+    /// O PAN pode vir mascarado conforme SPE_PANMASK.
+    pub track1: Option<String>,
+
+    /// Trilha 2 incompleta, se lida de cartão magnético.
+    ///
+    /// O PAN pode vir mascarado conforme SPE_PANMASK.
+    pub track2: Option<String>,
+
+    /// Trilha 3 incompleta, se lida de cartão magnético.
+    ///
+    /// O PAN pode vir mascarado conforme SPE_PANMASK.
+    pub track3: Option<String>,
+}
+
 /// Resposta do comando Menu
 #[derive(Debug, Clone)]
 pub struct MenuResponse {
@@ -1929,6 +2091,148 @@ pub mod AbecsCommand {
             vec![all_params]
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CheckEventExtended - Capturar evento teclado (CEX)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Evento de ICC verificado pelo comando CEX.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum CexIccEvent {
+        /// Ignora ICC (`xx0xxx`)
+        Ignore,
+        /// Verifica inserção de ICC (`xx1xxx`)
+        Insertion,
+        /// Verifica remoção de ICC (`xx2xxx`)
+        Removal,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct CheckEventExtended {
+        /// Verifica pressionamento de tecla não numérica.
+        pub verify_key: bool,
+        /// Verifica passagem de cartão magnético.
+        pub verify_magnetic_card: bool,
+        /// Evento ICC a verificar.
+        pub icc_event: CexIccEvent,
+        /// Ativa antena e verifica presença CTLS.
+        pub verify_ctls: bool,
+        /// Timeout máximo em segundos.
+        pub timeout: Option<u16>,
+        /// Definições de máscara de PAN para PP_TRK1INC, PP_TRK2INC e PP_TRK3INC.
+        pub pan_mask: Option<String>,
+    }
+
+    impl CheckEventExtended {
+        pub fn new(
+            verify_key: bool,
+            verify_magnetic_card: bool,
+            icc_event: CexIccEvent,
+            verify_ctls: bool,
+        ) -> Self {
+            Self {
+                verify_key,
+                verify_magnetic_card,
+                icc_event,
+                verify_ctls,
+                timeout: None,
+                pan_mask: None,
+            }
+        }
+
+        /// Aguarda qualquer evento suportado pelo CEX.
+        pub fn any_event() -> Self {
+            Self::new(true, true, CexIccEvent::Insertion, true)
+        }
+
+        /// Aguarda somente tecla não numérica.
+        pub fn key() -> Self {
+            Self::new(true, false, CexIccEvent::Ignore, false)
+        }
+
+        /// Aguarda somente cartão magnético.
+        pub fn magnetic_card() -> Self {
+            Self::new(false, true, CexIccEvent::Ignore, false)
+        }
+
+        /// Aguarda somente inserção de ICC.
+        pub fn icc_insertion() -> Self {
+            Self::new(false, false, CexIccEvent::Insertion, false)
+        }
+
+        /// Aguarda somente remoção de ICC.
+        pub fn icc_removal() -> Self {
+            Self::new(false, false, CexIccEvent::Removal, false)
+        }
+
+        /// Aguarda somente presença CTLS.
+        pub fn ctls() -> Self {
+            Self::new(false, false, CexIccEvent::Ignore, true)
+        }
+
+        pub fn with_timeout(mut self, timeout: u16) -> Self {
+            self.timeout = Some(timeout);
+            self
+        }
+
+        pub fn with_pan_mask(mut self, pan_mask: impl Into<String>) -> Self {
+            self.pan_mask = Some(pan_mask.into());
+            self
+        }
+
+        /// Monta o SPE_CEXOPT no formato de 6 caracteres:
+        ///
+        /// - `0xxxxx` ignora teclas; `1xxxxx` verifica teclas;
+        /// - `x0xxxx` ignora magnético; `x1xxxx` verifica magnético;
+        /// - `xx0xxx` ignora ICC; `xx1xxx` inserção; `xx2xxx` remoção;
+        /// - `xxx0xx` ignora CTLS; `xxx1xx` ativa antena/verifica CTLS;
+        /// - `xxxx00` RFU.
+        fn cex_options(&self) -> String {
+            let key = if self.verify_key { '1' } else { '0' };
+            let magnetic = if self.verify_magnetic_card { '1' } else { '0' };
+            let icc = match self.icc_event {
+                CexIccEvent::Ignore => '0',
+                CexIccEvent::Insertion => '1',
+                CexIccEvent::Removal => '2',
+            };
+            let ctls = if self.verify_ctls { '1' } else { '0' };
+
+            format!("{}{}{}{}00", key, magnetic, icc, ctls)
+        }
+    }
+
+    impl AbecsTypedCommand for CheckEventExtended {
+        type Response = CheckEventExtendedResponse;
+
+        fn command_id(&self) -> &str {
+            "CEX"
+        }
+
+        fn serialize_params(&self) -> Vec<Vec<u8>> {
+            use crate::serialize::abecs_param;
+
+            let mut all_params = Vec::new();
+
+            // SPE_CEXOPT - obrigatório
+            all_params.extend_from_slice(&abecs_param(0x0006, self.cex_options().as_bytes()));
+
+            // SPE_TIMEOUT - opcional
+            if let Some(timeout) = self.timeout {
+                all_params.extend_from_slice(&abecs_param(0x000C, &[timeout as u8]));
+            }
+
+            // SPE_PANMASK - opcional
+            if let Some(ref pan_mask) = self.pan_mask {
+                all_params.extend_from_slice(&abecs_param(0x0023, pan_mask.as_bytes()));
+            }
+
+            vec![all_params]
+        }
+
+        fn is_blocking(&self) -> bool {
+            true
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2063,6 +2367,63 @@ impl AbecsDeserialize for GetCardResponse {
             emv_data,
             icc_status,
             aid_table_info,
+        })
+    }
+}
+
+impl AbecsDeserialize for CheckEventExtendedResponse {
+    fn deserialize_abecs(response: &AbecsResponse) -> Result<Self, String> {
+        let block = response.get_block(0).ok_or("Bloco não encontrado")?;
+
+        let mut event_code = None;
+        let mut track1 = None;
+        let mut track2 = None;
+        let mut track3 = None;
+
+        let mut pos = 0;
+        while pos + 4 <= block.len() {
+            let param_id = ((block[pos] as u16) << 8) | (block[pos + 1] as u16);
+            let param_len = ((block[pos + 2] as u16) << 8) | (block[pos + 3] as u16);
+            pos += 4;
+
+            if pos + param_len as usize > block.len() {
+                return Err("Dados incompletos na resposta CEX".to_string());
+            }
+
+            let value = &block[pos..pos + param_len as usize];
+
+            match param_id {
+                0x8040 => {
+                    // PP_EVENT
+                    event_code = Some(String::from_utf8_lossy(value).to_string());
+                }
+                0x8041 => {
+                    // PP_TRK1INC
+                    track1 = Some(String::from_utf8_lossy(value).to_string());
+                }
+                0x8042 => {
+                    // PP_TRK2INC
+                    track2 = Some(String::from_utf8_lossy(value).to_string());
+                }
+                0x8043 => {
+                    // PP_TRK3INC
+                    track3 = Some(String::from_utf8_lossy(value).to_string());
+                }
+                _ => {}
+            }
+
+            pos += param_len as usize;
+        }
+
+        let event_code = event_code.ok_or("PP_EVENT não encontrado na resposta CEX")?;
+        let event = CheckEventExtendedEvent::from_code(&event_code);
+
+        Ok(CheckEventExtendedResponse {
+            event,
+            event_code,
+            track1,
+            track2,
+            track3,
         })
     }
 }

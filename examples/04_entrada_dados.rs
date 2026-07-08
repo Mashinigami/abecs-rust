@@ -20,6 +20,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut pinpad = PinpadConnection::open(port_name)?;
     println!("✅ Conectado!\n");
 
+    // ⚠️ DESCOMENTE PARA DEBUG DETALHADO
+    // pinpad.set_verbose(true);  // Mostra todos os bytes trocados
+
     // Abrir sessão
     let cmd = AbecsCommand::Open::new();
     pinpad.execute_typed(&cmd)?;
@@ -136,7 +139,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Fechar sessão
+    // ═══════════════════════════════════════════════════════════
+    // 4: Capturar Evento Extendido (CEX)
+    // ═══════════════════════════════════════════════════════════
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Capturar Evento Extendido...");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    let cmd = AbecsCommand::CheckEventExtended::any_event().with_timeout(30);
+    let response = pinpad.execute_typed(&cmd)?;
+
+    println!("Evento capturado com sucesso: {:?}", response);
+
+    // ═══════════════════════════════════════════════════════════
+    // 5: Fechar Sessão (CLO)
+    // ═══════════════════════════════════════════════════════════
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     let cmd = AbecsCommand::Close::new();
     pinpad.execute_typed(&cmd)?;
