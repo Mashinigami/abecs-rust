@@ -304,18 +304,31 @@ fn write_png_with_keypress_impl(port_name: &str, file_data_raw: &[u8]) -> Result
     pinpad.execute_typed(&cmd)?;
 
     let cmd = AbecsCommand::CheckEventExtended::key().with_timeout(60);
-    let key_response = pinpad.execute_typed(&cmd)?;
+    let key_result = pinpad.execute_typed(&cmd);
+
+    let cmd = AbecsCommand::ClearDisplay::new();
+    let clear_result = pinpad.execute_typed(&cmd);
+
+    let cmd = AbecsCommand::Close::new();
+    let close_result = pinpad.execute_typed(&cmd);
+
+    let key_response = match key_result {
+        Ok(key_response) => key_response,
+        Err(err) => {
+            let _ = clear_result;
+            let _ = close_result;
+            return Err(Box::new(err));
+        }
+    };
+
+    clear_result?;
+    close_result?;
+
     let response = match key_response.event {
         CheckEventExtendedEvent::OkEnter => 1,
         CheckEventExtendedEvent::Cancel => 0,
         _ => -1,
     };
-
-    let cmd = AbecsCommand::ClearDisplay::new();
-    pinpad.execute_typed(&cmd)?;
-
-    let cmd = AbecsCommand::Close::new();
-    pinpad.execute_typed(&cmd)?;
 
     Ok(response)
 }
