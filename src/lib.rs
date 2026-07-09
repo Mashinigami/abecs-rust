@@ -12,6 +12,10 @@ pub mod qrcode;
 pub mod libpinpadso;
 pub mod image;
 
+mod pinpad_display;
+mod pinpad_jni;
+mod pinpad_multimedia;
+
 // Re-exporta os tipos principais para facilitar o uso
 pub use command::AbecsCommand as RawAbecsCommand;
 pub use commands::AbecsCommand; // Novo namespace de comandos tipados
