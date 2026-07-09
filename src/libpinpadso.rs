@@ -6,7 +6,6 @@ use std::ffi::c_void;
 use std::io::Cursor;
 use image::ImageFormat;
 use crate::commands::CheckEventExtendedEvent;
-use crate::image::resize_image_bytes_to_fit_png;
 use crate::protocol::calculate_crc16;
 use crate::qrcode::generate_custom_qrcode;
 
@@ -231,12 +230,11 @@ fn write_qrcode_impl(port_name: &str, message: &str) -> Result<(), Box<dyn std::
     Ok(())
 }
 
-fn write_png_impl(port_name: &str, file_data_raw: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+fn write_png_impl(port_name: &str, file_data: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
     let mut pinpad = PinpadConnection::open(port_name)?;
     let cmd = AbecsCommand::Open::new();
     pinpad.execute_typed(&cmd)?;
 
-    let file_data = resize_image_bytes_to_fit_png(file_data_raw, 320, 230, true)?;
     let file_size = file_data.len() as u32;
     let file_crc = calculate_crc16(&file_data);
     let file_name = "IMAGE001";
@@ -270,12 +268,11 @@ fn write_png_impl(port_name: &str, file_data_raw: &[u8]) -> Result<(), Box<dyn s
     Ok(())
 }
 
-fn write_png_with_keypress_impl(port_name: &str, file_data_raw: &[u8]) -> Result<i32, Box<dyn std::error::Error>> {
+fn write_png_with_keypress_impl(port_name: &str, file_data: &[u8]) -> Result<i32, Box<dyn std::error::Error>> {
     let mut pinpad = PinpadConnection::open(port_name)?;
     let cmd = AbecsCommand::Open::new();
     pinpad.execute_typed(&cmd)?;
 
-    let file_data = resize_image_bytes_to_fit_png(file_data_raw, 320, 230, true)?;
     let file_size = file_data.len() as u32;
     let file_crc = calculate_crc16(&file_data);
     let file_name = "IMAGE001";

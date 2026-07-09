@@ -22,11 +22,11 @@ pub fn generate_custom_qrcode(text: &str) -> Result<GrayImage, QrError> {
         }
     }
 
-    // 3. Resize the canvas to 192x192 pixels
+    // 3. Resize the canvas to 200x200 pixels
     let resized_qr = image::imageops::resize(
         &base_image,
-        192,
-        192,
+        200,
+        200,
         FilterType::Nearest
     );
 
