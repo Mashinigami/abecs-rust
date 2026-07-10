@@ -4,7 +4,6 @@ use crate::pinpad_jni::{
     write_message_free,
     write_png,
     write_png_with_keypress,
-    write_qrcode,
 };
 use jni::sys::{jint, JNI_VERSION_1_6};
 use std::ffi::c_void;
@@ -30,11 +29,6 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut c_void) -> ji
                     name: jni::strings::JNIString::from("cleanDisplay"),
                     sig: jni::strings::JNIString::from("()Z"),
                     fn_ptr: clean_display as *mut c_void,
-                },
-                jni::NativeMethod {
-                    name: jni::strings::JNIString::from("writeQrCode"),
-                    sig: jni::strings::JNIString::from("(Ljava/lang/String;)Z"),
-                    fn_ptr: write_qrcode as *mut c_void,
                 },
                 jni::NativeMethod {
                     name: jni::strings::JNIString::from("writePng"),

@@ -8,11 +8,9 @@
 ///
 /// Execute com: cargo run --example 13_multimedia
 
-use image::ImageFormat;
+use std::fs;
 use pinpad::protocol::calculate_crc16;
-use pinpad::qrcode::generate_custom_qrcode;
 use pinpad::{AbecsCommand, MultimediaFileType, PinpadConnection};
-use std::io::Cursor;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("═══════════════════════════════════════════════════════");
@@ -22,13 +20,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ═══════════════════════════════════════════════════════════
     // 1. Dados da imagem
     // ═══════════════════════════════════════════════════════════
-    // let file_path = "examples/images/QRCode_example.png";
-    // let file_data = fs::read(file_path)?;
-
-    let file_data_raw = generate_custom_qrcode("https://google.com")?;
-    let mut file_data = Vec::new();
-    file_data_raw.write_to(&mut Cursor::new(&mut file_data), ImageFormat::Png)
-        .expect("Failed to encode PNG");
+    let file_path = "examples/images/QRCode_example.png";
+    let file_data = fs::read(file_path)?;
 
     let file_size = file_data.len() as u32;
     let file_crc = calculate_crc16(&file_data);

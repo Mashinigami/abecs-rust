@@ -8,7 +8,6 @@ pub mod error;
 pub mod protocol;
 pub mod response;
 pub mod serialize;
-pub mod qrcode;
 pub mod libpinpadso;
 pub mod image;
 

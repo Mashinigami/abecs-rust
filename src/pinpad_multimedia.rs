@@ -1,28 +1,10 @@
 // src/pinpad_multimedia.rs
 use crate::commands::CheckEventExtendedEvent;
 use crate::protocol::calculate_crc16;
-use crate::qrcode::generate_custom_qrcode;
 use crate::{AbecsCommand, MultimediaFileType, PinpadConnection};
-use image::ImageFormat;
-use std::io::Cursor;
 
 const MULTIMEDIA_BLOCK_SIZE: usize = 989;
-const QRCODE_FILE_NAME: &str = "QRCODE01";
 const PNG_FILE_NAME: &str = "IMAGE001";
-
-pub(crate) fn write_qrcode_impl(
-    port_name: &str,
-    message: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let file_data_raw = generate_custom_qrcode(message)?;
-
-    let mut file_data = Vec::new();
-    file_data_raw.write_to(&mut Cursor::new(&mut file_data), ImageFormat::Png)?;
-
-    display_png_file(port_name, QRCODE_FILE_NAME, &file_data, false)?;
-
-    Ok(())
-}
 
 pub(crate) fn write_png_impl(
     port_name: &str,

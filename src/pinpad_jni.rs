@@ -7,7 +7,6 @@ use crate::pinpad_display::{
 use crate::pinpad_multimedia::{
     write_png_impl,
     write_png_with_keypress_impl,
-    write_qrcode_impl,
 };
 use crate::PinpadConnection;
 use jni::objects::{JByteArray, JClass, JString};
@@ -75,30 +74,6 @@ pub(crate) extern "system" fn clean_display(
         Ok(_) => 1,
         Err(error) => {
             eprintln!("Erro ao limpar tela: {:?}", error);
-            0
-        }
-    }
-}
-
-pub(crate) extern "system" fn write_qrcode(
-    mut env: JNIEnv,
-    _class: JClass,
-    message: JString,
-) -> jboolean {
-    let Some(port_storage) = PinpadConnection::autodetect() else {
-        eprintln!("Erro: Nenhum Pinpad foi encontrado automaticamente.");
-        return 0;
-    };
-
-    let message_str: String = match env.get_string(&message) {
-        Ok(jni_str) => jni_str.into(),
-        Err(_) => return 0,
-    };
-
-    match write_qrcode_impl(port_storage.as_str(), &message_str) {
-        Ok(_) => 1,
-        Err(error) => {
-            eprintln!("Erro ao mostrar QR Code: {:?}", error);
             0
         }
     }
