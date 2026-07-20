@@ -4,6 +4,7 @@ use crate::pinpad_jni::{
     write_message_free,
     write_png,
     write_png_with_keypress,
+    write_message_with_keypress,
 };
 use jni::sys::{jint, JNI_VERSION_1_6};
 use std::ffi::c_void;
@@ -39,6 +40,11 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _reserved: *mut c_void) -> ji
                     name: jni::strings::JNIString::from("writePngWithKeypress"),
                     sig: jni::strings::JNIString::from("([B)I"),
                     fn_ptr: write_png_with_keypress as *mut c_void,
+                },
+                jni::NativeMethod {
+                    name: jni::strings::JNIString::from("writeMessageWithKeypress"),
+                    sig: jni::strings::JNIString::from("(Ljava/lang/String;)I"),
+                    fn_ptr: write_message_with_keypress as *mut c_void,
                 },
             ];
 

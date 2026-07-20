@@ -25,33 +25,23 @@ pub(crate) fn write_png_with_keypress_impl(
     load_and_display_png(&mut pinpad, PNG_FILE_NAME, file_data)?;
     delete_multimedia_file(&mut pinpad, PNG_FILE_NAME)?;
 
-    let cmd = AbecsCommand::CheckEventExtended::key().with_timeout(60);
-    let key_result = pinpad.execute_typed(&cmd);
+    let response = wait_for_keypress_and_close(&mut pinpad)?;
 
-    let cmd = AbecsCommand::ClearDisplay::new();
-    let clear_result = pinpad.execute_typed(&cmd);
+    Ok(response)
+}
 
-    let cmd = AbecsCommand::Close::new();
-    let close_result = pinpad.execute_typed(&cmd);
+pub(crate) fn write_message_with_keypress_impl(
+    port_name: &str,
+    message: &str,
+) -> Result<i32, Box<dyn std::error::Error>> {
+    let mut pinpad = PinpadConnection::open(port_name)?;
 
-    let key_response = match key_result {
-        Ok(key_response) => key_response,
-        Err(err) => {
-            let _ = clear_result;
-            let _ = close_result;
-            return Err(Box::new(err));
-        }
-    };
+    open_pinpad(&mut pinpad)?;
+    display_message(&mut pinpad, message)?;
+    close_pinpad(&mut pinpad)?;
 
-    clear_result?;
-    close_result?;
-
-    let response = match key_response.event {
-        CheckEventExtendedEvent::OkEnter => 1,
-        CheckEventExtendedEvent::Cancel => 0,
-        _ => -1,
-    };
-
+    let response = wait_for_keypress_and_close(&mut pinpad)?;
+    
     Ok(response)
 }
 
@@ -139,4 +129,47 @@ fn delete_multimedia_file(
     pinpad.execute_typed(&cmd)?;
 
     Ok(())
+}
+
+fn display_message(
+    pinpad: &mut PinpadConnection,
+    message: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = AbecsCommand::DisplayMessage::new(message);
+    pinpad.execute_typed(&cmd)?;
+
+    Ok(())
+}
+
+fn wait_for_keypress_and_close(
+    pinpad: &mut PinpadConnection,
+) -> Result<i32, Box<dyn std::error::Error>> {
+    let cmd = AbecsCommand::CheckEventExtended::key().with_timeout(60);
+    let key_result = pinpad.execute_typed(&cmd);
+
+    let cmd = AbecsCommand::ClearDisplay::new();
+    let clear_result = pinpad.execute_typed(&cmd);
+
+    let cmd = AbecsCommand::Close::new();
+    let close_result = pinpad.execute_typed(&cmd);
+
+    let key_response = match key_result {
+        Ok(key_response) => key_response,
+        Err(err) => {
+            let _ = clear_result;
+            let _ = close_result;
+            return Err(Box::new(err));
+        }
+    };
+
+    clear_result?;
+    close_result?;
+
+    let response = match key_response.event {
+        CheckEventExtendedEvent::OkEnter => 1,
+        CheckEventExtendedEvent::Cancel => 0,
+        _ => -1,
+    };
+
+    Ok(response)
 }

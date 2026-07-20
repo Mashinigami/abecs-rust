@@ -7,6 +7,7 @@ use crate::pinpad_display::{
 use crate::pinpad_multimedia::{
     write_png_impl,
     write_png_with_keypress_impl,
+    write_message_with_keypress_impl,
 };
 use crate::PinpadConnection;
 use jni::objects::{JByteArray, JClass, JString};
@@ -126,6 +127,27 @@ pub(crate) extern "system" fn write_png_with_keypress(
 
     write_png_with_keypress_impl(port_storage.as_str(), &file_data).unwrap_or_else(|error| {
         eprintln!("Erro ao mostrar imagem: {:?}", error);
+        -1
+    })
+}
+
+pub(crate) extern "system" fn write_message_with_keypress(
+    mut env: JNIEnv,
+    _class: JClass,
+    message: JString,
+) -> jint {
+    let Some(port_storage) = PinpadConnection::autodetect() else {
+        eprintln!("Erro: Nenhum Pinpad foi encontrado automaticamente.");
+        return -1;
+    };
+
+    let message_str: String = match env.get_string(&message) {
+        Ok(jni_str) => jni_str.into(),
+        Err(_) => return 0,
+    };
+
+    write_message_with_keypress_impl(port_storage.as_str(), &message_str).unwrap_or_else(|error| {
+        eprintln!("Erro ao mostrar mensagem: {:?}", error);
         -1
     })
 }
